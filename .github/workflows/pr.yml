@@ -3,7 +3,7 @@ name: pull request
 on:
   pull_request:
     branches:
-      - "**"
+      - "main"
 
 jobs:
   build:
@@ -30,8 +30,10 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Run test coverage
+        uses: ArtiomTr/jest-coverage-report-action@v2
+        with:
+          test-script: npm run test:coverage
+
       - name: Run tests
         run: npm run test
-
-      - name: Run test coverage
-        run: npm run test:coverage
