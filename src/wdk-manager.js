@@ -147,12 +147,10 @@ export default class WDK {
 
     for (const policy of this._policies) {
       const policyTarget = policy.target || {}
-      // ----- Wallet check -----
       if (policyTarget.wallet && policyTarget.wallet !== target.wallet) {
         continue
       }
 
-      // ----- Protocol check -----
       if (policyTarget.protocol) {
         const proto = policyTarget.protocol
         const tProto = target.protocol || {}
@@ -163,7 +161,6 @@ export default class WDK {
         if (proto.label && proto.label !== tProto.label) continue
       }
 
-      // ----- Method resolution -----
       let methods = policy.method
       if (!methods) methods = MUTATING_METHODS
       if (typeof methods === 'string') methods = [methods]
@@ -180,7 +177,6 @@ export default class WDK {
         const list = methodPolicyMap.get(methodName)
         if (!list.includes(policy)) list.push(policy)
 
-        // Wrap once per instance per method
         if (!wrappedMethods.has(methodName)) {
           const originalFn = instance[methodName].bind(instance)
           instance[methodName] = async (...args) => {
