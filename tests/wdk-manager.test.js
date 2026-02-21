@@ -566,7 +566,6 @@ describe("WdkManager", () => {
       getAccountMock.mockImplementation(createDummyAccount);
     });
 
-    // ---------------- 1. Global spending limit ----------------
     test("global spending limit policy rejects oversized sendTransaction", async () => {
       wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
 
@@ -590,7 +589,6 @@ describe("WdkManager", () => {
       expect(ok.type).toBe("send");
     });
 
-    // ---------------- 2. Wallet-specific policy ----------------
     test("wallet-specific policy only applies to matching wallet", async () => {
       wdkManager.registerWallet("ethereum-test", WalletManagerMock, CONFIG);
       wdkManager.registerWallet("ton", WalletManagerMock, CONFIG);
@@ -615,7 +613,6 @@ describe("WdkManager", () => {
       expect(ok.type).toBe("bridge");
     });
 
-    // ---------------- 3. Protocol-specific policy ----------------
     describe("protocol-targeted policy", () => {
       let SwapProtocolMock, BridgeProtocolMock, LendingProtocolMock;
       const SWAP_CONFIG = { swapMaxFee: 100 };
@@ -655,7 +652,7 @@ describe("WdkManager", () => {
             name: "swap-max-fee",
             target: { protocol: { blockchain: "ethereum", label: "mainnet" } },
             method: "swap",
-            evaluate: () => false, // For simplicity, just return false
+            evaluate: () => false,
           },
         ]);
 
@@ -668,7 +665,6 @@ describe("WdkManager", () => {
       });
     });
 
-    // ---------------- 4. Multiple methods ----------------
     test("policy with multiple methods applies to all listed methods", async () => {
       wdkManager.registerWallet("ethereum-local", WalletManagerMock, CONFIG);
 
@@ -699,7 +695,6 @@ describe("WdkManager", () => {
       expect(ok.type).toBe("sign");
     });
 
-    // ---------------- 5. Async policy ----------------
     test("async policy evaluates correctly", async () => {
       wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
 
@@ -708,7 +703,7 @@ describe("WdkManager", () => {
         {
           name: "business-hours",
           async evaluate() {
-            return hour >= 0; // always pass
+            return hour >= 0;
           },
         },
       ]);
@@ -719,7 +714,6 @@ describe("WdkManager", () => {
       expect(result.type).toBe("sign");
     });
 
-    // ---------------- 6. Recipient whitelist ----------------
     test("recipient whitelist blocks non-whitelisted addresses", async () => {
       wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
 
@@ -745,7 +739,6 @@ describe("WdkManager", () => {
       expect(ok.type).toBe("send");
     });
 
-    // ---------------- 7. Short-circuiting multiple policies ----------------
     test("stops at first rejecting policy", async () => {
       wdkManager.registerWallet("polygon", WalletManagerMock, CONFIG);
 
@@ -777,7 +770,6 @@ describe("WdkManager", () => {
       expect(calls).toEqual(["p1"]);
     });
 
-    // ---------------- 8. Global policy applies to all methods ----------------
     test("global policy runs on all mutating methods if method not specified", async () => {
       wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
 
@@ -791,7 +783,6 @@ describe("WdkManager", () => {
           },
         },
       ]);
-      // console.log(wdkManager._policies);
 
       const account = await wdkManager.getAccount("ethereum", 0);
 
@@ -802,7 +793,6 @@ describe("WdkManager", () => {
       expect(calls).toEqual(["transfer", "stake", "unstake"]);
     });
 
-    // ---------------- 9. Non-mutating methods ----------------
     test("non-mutating methods are not wrapped", async () => {
       wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
 
