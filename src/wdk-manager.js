@@ -24,7 +24,6 @@ import {
 } from '@tetherto/wdk-wallet/protocols'
 
 import { runPolicies } from './policies.js'
-import { MUTATING_METHODS } from './constants/mutatingMethods.js'
 
 const INSTANCE_POLICY_SYMBOL = Symbol('wdk_instance_policies')
 const INSTANCE_WRAPPED_SYMBOL = Symbol('wdk_instance_wrapped')
@@ -162,7 +161,17 @@ export default class WDK {
       }
 
       let methods = policy.method
-      if (!methods) methods = MUTATING_METHODS
+      if (!methods) {
+        methods = Set()
+        let obj = instance
+        while (obj && obj !== Object.prototype) {
+          Object.getOwnPropertyNames(obj)
+            .filter((prop) => typeof obj[prop] === 'function')
+            .forEach((prop) => methods.add(prop))
+
+          obj = Object.getPrototypeOf(obj)
+        }
+      }
       if (typeof methods === 'string') methods = [methods]
 
       for (const methodName of methods) {
