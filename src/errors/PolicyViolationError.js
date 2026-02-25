@@ -1,3 +1,5 @@
+/** @typedef {import('../wdk-manager.js').PolicyTarget} PolicyTarget */
+
 /**
  * Error thrown when a registered policy rejects an operation.
  */
@@ -5,7 +7,7 @@ export class PolicyViolationError extends Error {
   /**
    * @param {string} policyName
    * @param {string} method
-   * @param {Object} target - { wallet?, protocol?: { blockchain?, label? } }
+   * @param {PolicyTarget} target
    */
   constructor (policyName, method, target = {}) {
     const targetDesc = target.wallet
