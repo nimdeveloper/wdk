@@ -16,12 +16,7 @@
 
 import WalletManager from '@tetherto/wdk-wallet'
 
-import {
-  SwapProtocol,
-  BridgeProtocol,
-  LendingProtocol,
-  FiatProtocol
-} from '@tetherto/wdk-wallet/protocols'
+import { SwapProtocol, BridgeProtocol, LendingProtocol, FiatProtocol } from '@tetherto/wdk-wallet/protocols'
 
 import { PolicyViolationError } from './errors'
 

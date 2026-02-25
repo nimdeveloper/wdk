@@ -1,549 +1,440 @@
-"use strict";
+'use strict'
 
-import { beforeEach, describe, expect, jest, test } from "@jest/globals";
+import { beforeEach, describe, expect, jest, test } from '@jest/globals'
 
-import WalletManager from "@tetherto/wdk-wallet";
+import WalletManager from '@tetherto/wdk-wallet'
 
-import {
-  BridgeProtocol,
-  LendingProtocol,
-  SwapProtocol,
-} from "@tetherto/wdk-wallet/protocols";
+import { BridgeProtocol, LendingProtocol, SwapProtocol } from '@tetherto/wdk-wallet/protocols'
 
-import WdkManager, { PolicyViolationError } from "../index.js";
+import WdkManager, { PolicyViolationError } from '../index.js'
 
-const SEED_PHRASE =
-  "cook voyage document eight skate token alien guide drink uncle term abuse";
+const SEED_PHRASE = 'cook voyage document eight skate token alien guide drink uncle term abuse'
 
 const getAccountMock = jest.fn(),
-  getAccountByPathMock = jest.fn(),
-  getFeeRatesMock = jest.fn(),
-  disposeMock = jest.fn();
+      getAccountByPathMock = jest.fn(),
+      getFeeRatesMock = jest.fn(),
+      disposeMock = jest.fn()
 
 const WalletManagerMock = jest.fn().mockImplementation((seed, config) => {
   return Object.create(WalletManager.prototype, {
     getAccount: {
-      value: getAccountMock,
+      value: getAccountMock
     },
     getAccountByPath: {
-      value: getAccountByPathMock,
+      value: getAccountByPathMock
     },
     getFeeRates: {
-      value: getFeeRatesMock,
+      value: getFeeRatesMock
     },
     dispose: {
-      value: disposeMock,
-    },
-  });
-});
+      value: disposeMock
+    }
+  })
+})
 
-describe("WdkManager", () => {
+describe('WdkManager', () => {
   const DUMMY_ACCOUNT = {
     getAddress: async () => {
-      return "0xa460AEbce0d3A4BecAd8ccf9D6D4861296c503Bd";
-    },
-  };
+      return '0xa460AEbce0d3A4BecAd8ccf9D6D4861296c503Bd'
+    }
+  }
 
-  const CONFIG = { transferMaxFee: 100 };
+  const CONFIG = { transferMaxFee: 100 }
 
-  let wdkManager;
+  let wdkManager
 
   beforeEach(() => {
-    wdkManager = new WdkManager(SEED_PHRASE);
-  });
+    wdkManager = new WdkManager(SEED_PHRASE)
+  })
 
-  describe("getAccount", () => {
+  describe('getAccount', () => {
     beforeEach(() => {
-      getAccountMock.mockResolvedValue(DUMMY_ACCOUNT);
-    });
+      getAccountMock.mockResolvedValue(DUMMY_ACCOUNT)
+    })
 
-    test("should return the account at the given index", async () => {
-      wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+    test('should return the account at the given index', async () => {
+      wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-      const account = await wdkManager.getAccount("ethereum", 0);
+      const account = await wdkManager.getAccount('ethereum', 0)
 
-      expect(WalletManagerMock).toHaveBeenCalledWith(SEED_PHRASE, CONFIG);
+      expect(WalletManagerMock).toHaveBeenCalledWith(SEED_PHRASE, CONFIG)
 
-      expect(getAccountMock).toHaveBeenCalledWith(0);
+      expect(getAccountMock).toHaveBeenCalledWith(0)
 
-      expect(account).toEqual(DUMMY_ACCOUNT);
-    });
+      expect(account).toEqual(DUMMY_ACCOUNT)
+    })
 
-    test("should trigger middlewares", async () => {
-      const middleware = jest.fn();
+    test('should trigger middlewares', async () => {
+      const middleware = jest.fn()
 
-      wdkManager
-        .registerWallet("ethereum", WalletManagerMock, CONFIG)
-        .registerMiddleware("ethereum", middleware);
+      wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
+                .registerMiddleware('ethereum', middleware)
 
-      const account = await wdkManager.getAccount("ethereum", 0);
+      const account = await wdkManager.getAccount('ethereum', 0)
 
-      expect(middleware).toHaveBeenCalledWith(DUMMY_ACCOUNT);
+      expect(middleware).toHaveBeenCalledWith(DUMMY_ACCOUNT)
 
-      expect(account).toEqual(DUMMY_ACCOUNT);
-    });
+      expect(account).toEqual(DUMMY_ACCOUNT)
+    })
 
-    test("should throw if no wallet has been registered for the given blockchain", async () => {
-      await expect(wdkManager.getAccount("ethereum", 0)).rejects.toThrow(
-        "No wallet registered for blockchain: ethereum.",
-      );
-    });
+    test('should throw if no wallet has been registered for the given blockchain', async () => {
+      await expect(wdkManager.getAccount('ethereum', 0))
+        .rejects.toThrow('No wallet registered for blockchain: ethereum.')
+    })
 
-    describe("should decorate the account instance with", () => {
-      describe("getSwapProtocol", () => {
-        const SWAP_CONFIG = { swapMaxFee: 100 };
+    describe('should decorate the account instance with', () => {
+      describe('getSwapProtocol', () => {
+        const SWAP_CONFIG = { swapMaxFee: 100 }
 
-        let SwapProtocolMock;
+        let SwapProtocolMock
 
         beforeEach(() => {
-          SwapProtocolMock = jest.fn();
+          SwapProtocolMock = jest.fn()
 
-          Object.setPrototypeOf(
-            SwapProtocolMock.prototype,
-            SwapProtocol.prototype,
-          );
-        });
+          Object.setPrototypeOf(SwapProtocolMock.prototype, SwapProtocol.prototype)
+        })
 
         test("should return the swap protocol registered for the account's blockchain and the given label", async () => {
-          wdkManager
-            .registerWallet("ethereum", WalletManagerMock, CONFIG)
-            .registerProtocol(
-              "ethereum",
-              "test",
-              SwapProtocolMock,
-              SWAP_CONFIG,
-            );
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
+                    .registerProtocol('ethereum', 'test', SwapProtocolMock, SWAP_CONFIG)
 
-          const account = await wdkManager.getAccount("ethereum", 0);
+          const account = await wdkManager.getAccount('ethereum', 0)
 
-          const protocol = account.getSwapProtocol("test");
+          const protocol = account.getSwapProtocol('test')
 
-          expect(SwapProtocolMock).toHaveBeenCalledWith(account, SWAP_CONFIG);
+          expect(SwapProtocolMock).toHaveBeenCalledWith(account, SWAP_CONFIG)
 
-          expect(protocol).toBeInstanceOf(SwapProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(SwapProtocolMock)
+        })
 
-        test("should return the swap protocol registered for the account and the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should return the swap protocol registered for the account and the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccount("ethereum", 0);
+          const account = await wdkManager.getAccount('ethereum', 0)
 
-          account.registerProtocol("test", SwapProtocolMock, SWAP_CONFIG);
+          account.registerProtocol('test', SwapProtocolMock, SWAP_CONFIG)
 
-          const protocol = account.getSwapProtocol("test");
+          const protocol = account.getSwapProtocol('test')
 
-          expect(SwapProtocolMock).toHaveBeenCalledWith(account, SWAP_CONFIG);
+          expect(SwapProtocolMock).toHaveBeenCalledWith(account, SWAP_CONFIG)
 
-          expect(protocol).toBeInstanceOf(SwapProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(SwapProtocolMock)
+        })
 
-        test("should throw if no swap protocol has been registered for the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should throw if no swap protocol has been registered for the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccount("ethereum", 0);
+          const account = await wdkManager.getAccount('ethereum', 0)
 
-          expect(() => account.getSwapProtocol("test")).toThrow(
-            "No swap protocol registered for label: test.",
-          );
-        });
-      });
+          expect(() => account.getSwapProtocol('test'))
+            .toThrow('No swap protocol registered for label: test.')
+        })
+      })
 
-      describe("getBridgeProtocol", () => {
-        const BRIDGE_CONFIG = { bridgeMaxFee: 100 };
+      describe('getBridgeProtocol', () => {
+        const BRIDGE_CONFIG = { bridgeMaxFee: 100 }
 
-        let BridgeProtocolMock;
+        let BridgeProtocolMock
 
         beforeEach(() => {
-          BridgeProtocolMock = jest.fn();
+          BridgeProtocolMock = jest.fn()
 
-          Object.setPrototypeOf(
-            BridgeProtocolMock.prototype,
-            BridgeProtocol.prototype,
-          );
-        });
+          Object.setPrototypeOf(BridgeProtocolMock.prototype, BridgeProtocol.prototype)
+        })
 
         test("should return the bridge protocol registered for the account's blockchain and the given label", async () => {
-          wdkManager
-            .registerWallet("ethereum", WalletManagerMock, CONFIG)
-            .registerProtocol(
-              "ethereum",
-              "test",
-              BridgeProtocolMock,
-              BRIDGE_CONFIG,
-            );
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
+                    .registerProtocol('ethereum', 'test', BridgeProtocolMock, BRIDGE_CONFIG)
 
-          const account = await wdkManager.getAccount("ethereum", 0);
+          const account = await wdkManager.getAccount('ethereum', 0)
 
-          const protocol = account.getBridgeProtocol("test");
+          const protocol = account.getBridgeProtocol('test')
 
-          expect(BridgeProtocolMock).toHaveBeenCalledWith(
-            account,
-            BRIDGE_CONFIG,
-          );
+          expect(BridgeProtocolMock).toHaveBeenCalledWith(account, BRIDGE_CONFIG)
 
-          expect(protocol).toBeInstanceOf(BridgeProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(BridgeProtocolMock)
+        })
 
-        test("should return the bridge protocol registered for the account and the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should return the bridge protocol registered for the account and the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccount("ethereum", 0);
+          const account = await wdkManager.getAccount('ethereum', 0)
 
-          account.registerProtocol("test", BridgeProtocolMock, BRIDGE_CONFIG);
+          account.registerProtocol('test', BridgeProtocolMock, BRIDGE_CONFIG)
 
-          const protocol = account.getBridgeProtocol("test");
+          const protocol = account.getBridgeProtocol('test')
 
-          expect(BridgeProtocolMock).toHaveBeenCalledWith(
-            account,
-            BRIDGE_CONFIG,
-          );
+          expect(BridgeProtocolMock).toHaveBeenCalledWith(account, BRIDGE_CONFIG)
 
-          expect(protocol).toBeInstanceOf(BridgeProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(BridgeProtocolMock)
+        })
 
-        test("should throw if no bridge protocol has been registered for the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should throw if no bridge protocol has been registered for the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccount("ethereum", 0);
+          const account = await wdkManager.getAccount('ethereum', 0)
 
-          expect(() => account.getBridgeProtocol("test")).toThrow(
-            "No bridge protocol registered for label: test.",
-          );
-        });
-      });
+          expect(() => account.getBridgeProtocol('test'))
+            .toThrow('No bridge protocol registered for label: test.')
+        })
+      })
 
-      describe("getLendingProtocol", () => {
-        let LendingProtocolMock;
+      describe('getLendingProtocol', () => {
+        let LendingProtocolMock
 
         beforeEach(() => {
-          LendingProtocolMock = jest.fn();
+          LendingProtocolMock = jest.fn()
 
-          Object.setPrototypeOf(
-            LendingProtocolMock.prototype,
-            LendingProtocol.prototype,
-          );
-        });
+          Object.setPrototypeOf(LendingProtocolMock.prototype, LendingProtocol.prototype)
+        })
 
         test("should return the lending protocol registered for the account's blockchain and the given label", async () => {
-          wdkManager
-            .registerWallet("ethereum", WalletManagerMock, CONFIG)
-            .registerProtocol(
-              "ethereum",
-              "test",
-              LendingProtocolMock,
-              undefined,
-            );
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
+                    .registerProtocol('ethereum', 'test', LendingProtocolMock, undefined)
 
-          const account = await wdkManager.getAccount("ethereum", 0);
+          const account = await wdkManager.getAccount('ethereum', 0)
 
-          const protocol = account.getLendingProtocol("test");
+          const protocol = account.getLendingProtocol('test')
 
-          expect(LendingProtocolMock).toHaveBeenCalledWith(account, undefined);
+          expect(LendingProtocolMock).toHaveBeenCalledWith(account, undefined)
 
-          expect(protocol).toBeInstanceOf(LendingProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(LendingProtocolMock)
+        })
 
-        test("should return the lending protocol registered for the account and the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should return the lending protocol registered for the account and the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccount("ethereum", 0);
+          const account = await wdkManager.getAccount('ethereum', 0)
 
-          account.registerProtocol("test", LendingProtocolMock, undefined);
+          account.registerProtocol('test', LendingProtocolMock, undefined)
 
-          const protocol = account.getLendingProtocol("test");
+          const protocol = account.getLendingProtocol('test')
 
-          expect(LendingProtocolMock).toHaveBeenCalledWith(account, undefined);
+          expect(LendingProtocolMock).toHaveBeenCalledWith(account, undefined)
 
-          expect(protocol).toBeInstanceOf(LendingProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(LendingProtocolMock)
+        })
 
-        test("should throw if no lending protocol has been registered for the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should throw if no lending protocol has been registered for the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccount("ethereum", 0);
+          const account = await wdkManager.getAccount('ethereum', 0)
 
-          expect(() => account.getLendingProtocol("test")).toThrow(
-            "No lending protocol registered for label: test.",
-          );
-        });
-      });
-    });
-  });
+          expect(() => account.getLendingProtocol('test'))
+            .toThrow('No lending protocol registered for label: test.')
+        })
+      })
+    })
+  })
 
-  describe("getAccountByPath", () => {
+  describe('getAccountByPath', () => {
     beforeEach(() => {
-      getAccountByPathMock.mockResolvedValue(DUMMY_ACCOUNT);
-    });
+      getAccountByPathMock.mockResolvedValue(DUMMY_ACCOUNT)
+    })
 
-    test("should return the account at the given path", async () => {
-      wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+    test('should return the account at the given path', async () => {
+      wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-      const account = await wdkManager.getAccountByPath("ethereum", "0'/0/0");
+      const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-      expect(WalletManagerMock).toHaveBeenCalledWith(SEED_PHRASE, CONFIG);
+      expect(WalletManagerMock).toHaveBeenCalledWith(SEED_PHRASE, CONFIG)
 
-      expect(getAccountByPathMock).toHaveBeenCalledWith("0'/0/0");
+      expect(getAccountByPathMock).toHaveBeenCalledWith("0'/0/0")
 
-      expect(account).toEqual(DUMMY_ACCOUNT);
-    });
+      expect(account).toEqual(DUMMY_ACCOUNT)
+    })
 
-    test("should trigger middlewares", async () => {
-      const middleware = jest.fn();
+    test('should trigger middlewares', async () => {
+      const middleware = jest.fn()
 
-      wdkManager
-        .registerWallet("ethereum", WalletManagerMock, CONFIG)
-        .registerMiddleware("ethereum", middleware);
+      wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
+                .registerMiddleware('ethereum', middleware)
 
-      const account = await wdkManager.getAccountByPath("ethereum", "0'/0/0");
+      const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-      expect(middleware).toHaveBeenCalledWith(DUMMY_ACCOUNT);
+      expect(middleware).toHaveBeenCalledWith(DUMMY_ACCOUNT)
 
-      expect(account).toEqual(DUMMY_ACCOUNT);
-    });
+      expect(account).toEqual(DUMMY_ACCOUNT)
+    })
 
-    test("should throw if no wallet has been registered for the given blockchain", async () => {
-      await expect(
-        wdkManager.getAccountByPath("ethereum", "0'/0/0"),
-      ).rejects.toThrow("No wallet registered for blockchain: ethereum.");
-    });
+    test('should throw if no wallet has been registered for the given blockchain', async () => {
+      await expect(wdkManager.getAccountByPath('ethereum', "0'/0/0"))
+        .rejects.toThrow('No wallet registered for blockchain: ethereum.')
+    })
 
-    describe("should decorate the account instance with", () => {
-      describe("getSwapProtocol", () => {
-        const SWAP_CONFIG = { swapMaxFee: 100 };
+    describe('should decorate the account instance with', () => {
+      describe('getSwapProtocol', () => {
+        const SWAP_CONFIG = { swapMaxFee: 100 }
 
-        let SwapProtocolMock;
+        let SwapProtocolMock
 
         beforeEach(() => {
-          SwapProtocolMock = jest.fn();
+          SwapProtocolMock = jest.fn()
 
-          Object.setPrototypeOf(
-            SwapProtocolMock.prototype,
-            SwapProtocol.prototype,
-          );
-        });
+          Object.setPrototypeOf(SwapProtocolMock.prototype, SwapProtocol.prototype)
+        })
 
         test("should return the swap protocol registered for the account's blockchain and the given label", async () => {
-          wdkManager
-            .registerWallet("ethereum", WalletManagerMock, CONFIG)
-            .registerProtocol(
-              "ethereum",
-              "test",
-              SwapProtocolMock,
-              SWAP_CONFIG,
-            );
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
+                    .registerProtocol('ethereum', 'test', SwapProtocolMock, SWAP_CONFIG)
 
-          const account = await wdkManager.getAccountByPath(
-            "ethereum",
-            "0'/0/0",
-          );
+          const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-          const protocol = account.getSwapProtocol("test");
+          const protocol = account.getSwapProtocol('test')
 
-          expect(SwapProtocolMock).toHaveBeenCalledWith(account, SWAP_CONFIG);
+          expect(SwapProtocolMock).toHaveBeenCalledWith(account, SWAP_CONFIG)
 
-          expect(protocol).toBeInstanceOf(SwapProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(SwapProtocolMock)
+        })
 
-        test("should return the swap protocol registered for the account and the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should return the swap protocol registered for the account and the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccountByPath(
-            "ethereum",
-            "0'/0/0",
-          );
+          const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-          account.registerProtocol("test", SwapProtocolMock, SWAP_CONFIG);
+          account.registerProtocol('test', SwapProtocolMock, SWAP_CONFIG)
 
-          const protocol = account.getSwapProtocol("test");
+          const protocol = account.getSwapProtocol('test')
 
-          expect(SwapProtocolMock).toHaveBeenCalledWith(account, SWAP_CONFIG);
+          expect(SwapProtocolMock).toHaveBeenCalledWith(account, SWAP_CONFIG)
 
-          expect(protocol).toBeInstanceOf(SwapProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(SwapProtocolMock)
+        })
 
-        test("should throw if no swap protocol has been registered for the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should throw if no swap protocol has been registered for the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccountByPath(
-            "ethereum",
-            "0'/0/0",
-          );
+          const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-          expect(() => account.getSwapProtocol("test")).toThrow(
-            "No swap protocol registered for label: test.",
-          );
-        });
-      });
+          expect(() => account.getSwapProtocol('test'))
+            .toThrow('No swap protocol registered for label: test.')
+        })
+      })
 
-      describe("getBridgeProtocol", () => {
-        const BRIDGE_CONFIG = { bridgeMaxFee: 100 };
+      describe('getBridgeProtocol', () => {
+        const BRIDGE_CONFIG = { bridgeMaxFee: 100 }
 
-        let BridgeProtocolMock;
+        let BridgeProtocolMock
 
         beforeEach(() => {
-          BridgeProtocolMock = jest.fn();
+          BridgeProtocolMock = jest.fn()
 
-          Object.setPrototypeOf(
-            BridgeProtocolMock.prototype,
-            BridgeProtocol.prototype,
-          );
-        });
+          Object.setPrototypeOf(BridgeProtocolMock.prototype, BridgeProtocol.prototype)
+        })
 
         test("should return the bridge protocol registered for the account's blockchain and the given label", async () => {
-          wdkManager
-            .registerWallet("ethereum", WalletManagerMock, CONFIG)
-            .registerProtocol(
-              "ethereum",
-              "test",
-              BridgeProtocolMock,
-              BRIDGE_CONFIG,
-            );
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
+                    .registerProtocol('ethereum', 'test', BridgeProtocolMock, BRIDGE_CONFIG)
 
-          const account = await wdkManager.getAccountByPath(
-            "ethereum",
-            "0'/0/0",
-          );
+          const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-          const protocol = account.getBridgeProtocol("test");
+          const protocol = account.getBridgeProtocol('test')
 
-          expect(BridgeProtocolMock).toHaveBeenCalledWith(
-            account,
-            BRIDGE_CONFIG,
-          );
+          expect(BridgeProtocolMock).toHaveBeenCalledWith(account, BRIDGE_CONFIG)
 
-          expect(protocol).toBeInstanceOf(BridgeProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(BridgeProtocolMock)
+        })
 
-        test("should return the bridge protocol registered for the account and the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should return the bridge protocol registered for the account and the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccountByPath(
-            "ethereum",
-            "0'/0/0",
-          );
+          const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-          account.registerProtocol("test", BridgeProtocolMock, BRIDGE_CONFIG);
+          account.registerProtocol('test', BridgeProtocolMock, BRIDGE_CONFIG)
 
-          const protocol = account.getBridgeProtocol("test");
+          const protocol = account.getBridgeProtocol('test')
 
-          expect(BridgeProtocolMock).toHaveBeenCalledWith(
-            account,
-            BRIDGE_CONFIG,
-          );
+          expect(BridgeProtocolMock).toHaveBeenCalledWith(account, BRIDGE_CONFIG)
 
-          expect(protocol).toBeInstanceOf(BridgeProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(BridgeProtocolMock)
+        })
 
-        test("should throw if no bridge protocol has been registered for the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should throw if no bridge protocol has been registered for the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccountByPath(
-            "ethereum",
-            "0'/0/0",
-          );
+          const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-          expect(() => account.getBridgeProtocol("test")).toThrow(
-            "No bridge protocol registered for label: test.",
-          );
-        });
-      });
+          expect(() => account.getBridgeProtocol('test'))
+            .toThrow('No bridge protocol registered for label: test.')
+        })
+      })
 
-      describe("getLendingProtocol", () => {
-        let LendingProtocolMock;
+      describe('getLendingProtocol', () => {
+        let LendingProtocolMock
 
         beforeEach(() => {
-          LendingProtocolMock = jest.fn();
+          LendingProtocolMock = jest.fn()
 
-          Object.setPrototypeOf(
-            LendingProtocolMock.prototype,
-            LendingProtocol.prototype,
-          );
-        });
+          Object.setPrototypeOf(LendingProtocolMock.prototype, LendingProtocol.prototype)
+        })
 
         test("should return the lending protocol registered for the account's blockchain and the given label", async () => {
-          wdkManager
-            .registerWallet("ethereum", WalletManagerMock, CONFIG)
-            .registerProtocol(
-              "ethereum",
-              "test",
-              LendingProtocolMock,
-              undefined,
-            );
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
+                    .registerProtocol('ethereum', 'test', LendingProtocolMock, undefined)
 
-          const account = await wdkManager.getAccountByPath(
-            "ethereum",
-            "0'/0/0",
-          );
+          const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-          const protocol = account.getLendingProtocol("test");
+          const protocol = account.getLendingProtocol('test')
 
-          expect(LendingProtocolMock).toHaveBeenCalledWith(account, undefined);
+          expect(LendingProtocolMock).toHaveBeenCalledWith(account, undefined)
 
-          expect(protocol).toBeInstanceOf(LendingProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(LendingProtocolMock)
+        })
 
-        test("should return the lending protocol registered for the account and the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should return the lending protocol registered for the account and the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccountByPath(
-            "ethereum",
-            "0'/0/0",
-          );
+          const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-          account.registerProtocol("test", LendingProtocolMock, undefined);
+          account.registerProtocol('test', LendingProtocolMock, undefined)
 
-          const protocol = account.getLendingProtocol("test");
+          const protocol = account.getLendingProtocol('test')
 
-          expect(LendingProtocolMock).toHaveBeenCalledWith(account, undefined);
+          expect(LendingProtocolMock).toHaveBeenCalledWith(account, undefined)
 
-          expect(protocol).toBeInstanceOf(LendingProtocolMock);
-        });
+          expect(protocol).toBeInstanceOf(LendingProtocolMock)
+        })
 
-        test("should throw if no lending protocol has been registered for the given label", async () => {
-          wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+        test('should throw if no lending protocol has been registered for the given label', async () => {
+          wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-          const account = await wdkManager.getAccountByPath(
-            "ethereum",
-            "0'/0/0",
-          );
+          const account = await wdkManager.getAccountByPath('ethereum', "0'/0/0")
 
-          expect(() => account.getLendingProtocol("test")).toThrow(
-            "No lending protocol registered for label: test.",
-          );
-        });
-      });
-    });
-  });
+          expect(() => account.getLendingProtocol('test'))
+            .toThrow('No lending protocol registered for label: test.')
+        })
+      })
+    })
+  })
 
-  describe("getFeeRates", () => {
-    test("should return the correct fee rates for the given blockchain", async () => {
-      const DUMMY_FEE_RATES = { normal: 100n, fast: 200n };
+  describe('getFeeRates', () => {
+    test('should return the correct fee rates for the given blockchain', async () => {
+      const DUMMY_FEE_RATES = { normal: 100n, fast: 200n }
 
-      getFeeRatesMock.mockResolvedValue(DUMMY_FEE_RATES);
+      getFeeRatesMock.mockResolvedValue(DUMMY_FEE_RATES)
 
-      wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+      wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-      const feeRates = await wdkManager.getFeeRates("ethereum");
+      const feeRates = await wdkManager.getFeeRates('ethereum')
 
-      expect(feeRates).toEqual(DUMMY_FEE_RATES);
-    });
+      expect(feeRates).toEqual(DUMMY_FEE_RATES)
+    })
 
-    test("should throw if no wallet has been registered for the given blockchain", async () => {
-      await expect(wdkManager.getFeeRates("ethereum")).rejects.toThrow(
-        "No wallet registered for blockchain: ethereum.",
-      );
-    });
-  });
+    test('should throw if no wallet has been registered for the given blockchain', async () => {
+      await expect(wdkManager.getFeeRates('ethereum'))
+        .rejects.toThrow('No wallet registered for blockchain: ethereum.')
+    })
+  })
 
-  describe("dispose", () => {
-    test("should successfully dispose the wallet managers", async () => {
-      wdkManager.registerWallet("ethereum", WalletManagerMock, CONFIG);
+  describe('dispose', () => {
+    test('should successfully dispose the wallet managers', async () => {
+      wdkManager.registerWallet('ethereum', WalletManagerMock, CONFIG)
 
-      wdkManager.dispose();
+      wdkManager.dispose()
 
-      expect(disposeMock).toHaveBeenCalled();
-    });
-  });
+      expect(disposeMock).toHaveBeenCalled()
+    })
+  })
 
   describe("registerPolicies", () => {
     const CONFIG = { transferMaxFee: 100 };
