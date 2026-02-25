@@ -36,7 +36,13 @@ const INSTANCE_WRAPPED_SYMBOL = Symbol('wdk_instance_wrapped')
 
 /** @typedef {<A extends IWalletAccount>(account: A) => Promise<void>} MiddlewareFunction */
 
-/** @typedef {{name: string, target?: {wallet?: string, protocol?: {blockchain?: string, label?: string}}, method?: string|string[], evaluate(method: string, params: any, wallet: any): boolean|Promise<boolean> }} Policy */
+/**
+ * @typedef {Object} Policy
+ * @property {string} name - The policy name.
+ * @property {{wallet?: string, protocol?: {blockchain?: string, label?: string}}} [target] - Scopes the policy to a specific wallet or protocol.
+ * @property {string|string[]} [method] - The method(s) to gate. If omitted, all methods are gated.
+ * @property {(method: string, params: any, wallet: any) => boolean|Promise<boolean>} evaluate - Evaluates whether the method call is allowed.
+ */
 
 export default class WDK {
   /**
@@ -151,13 +157,13 @@ export default class WDK {
       }
 
       if (policyTarget.protocol) {
-        const proto = policyTarget.protocol
-        const tProto = target.protocol || {}
+        const policyProtocol = policyTarget.protocol
+        const targetProto = target.protocol || {}
 
-        if (proto.blockchain && proto.blockchain !== tProto.blockchain) {
+        if (policyProtocol.blockchain && policyProtocol.blockchain !== targetProto.blockchain) {
           continue
         }
-        if (proto.label && proto.label !== tProto.label) continue
+        if (policyProtocol.label && policyProtocol.label !== targetProto.label) continue
       }
 
       let methods = policy.method
