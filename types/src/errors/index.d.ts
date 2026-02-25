@@ -1,1 +1,1 @@
-export * from "./PolicyViolationError.js";
+export { PolicyViolationError } from "./PolicyViolationError.js";

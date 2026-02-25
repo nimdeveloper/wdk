@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-"use strict";
+'use strict'
 
 /** @typedef {import('./src/wdk-manager.js').IWalletAccount} IWalletAccount */
 /** @typedef {import('./src/wdk-manager.js').FeeRates} FeeRates */
@@ -20,5 +20,5 @@
 
 /** @typedef {import('./src/wallet-account-with-protocols.js').IWalletAccountWithProtocols} IWalletAccountWithProtocols */
 
-export { default } from "./src/wdk-manager.js";
-export { PolicyViolationError } from "./src/errors";
+export { default } from './src/wdk-manager.js'
+export { PolicyViolationError } from './src/errors'

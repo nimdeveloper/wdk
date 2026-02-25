@@ -23,6 +23,8 @@ import {
   FiatProtocol
 } from '@tetherto/wdk-wallet/protocols'
 
+import { PolicyViolationError } from './errors'
+
 const INSTANCE_POLICY_SYMBOL = Symbol('wdk_instance_policies')
 const INSTANCE_WRAPPED_SYMBOL = Symbol('wdk_instance_wrapped')
 
@@ -145,7 +147,6 @@ export default class WDK {
       }
     }
   }
-
 
   /**
    * Applies policies to a specific account or protocol instance.

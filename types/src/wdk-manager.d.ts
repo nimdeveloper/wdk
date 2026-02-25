@@ -2,7 +2,20 @@
 /** @typedef {import('@tetherto/wdk-wallet').FeeRates} FeeRates */
 /** @typedef {import('./wallet-account-with-protocols.js').IWalletAccountWithProtocols} IWalletAccountWithProtocols */
 /** @typedef {<A extends IWalletAccount>(account: A) => Promise<void>} MiddlewareFunction */
-/** @typedef {{name: string, target?: {wallet?: string, protocol?: {blockchain?: string, label?: string}}, method?: string|string[], evaluate(method: string, params: any, wallet: any): boolean|Promise<boolean> }} Policy */
+/**
+ * @typedef {Object} PolicyTarget
+ * @property {string} [wallet] - The wallet identifier this policy applies to.
+ * @property {Object} [protocol] - The protocol this policy applies to.
+ * @property {string} [protocol.blockchain] - The blockchain name of the protocol (e.g. "ethereum", "solana").
+ * @property {string} [protocol.label] - A protocol label or identifier.
+ */
+/**
+ * @typedef {Object} Policy
+ * @property {string} name - The policy name.
+ * @property {PolicyTarget} [target] - Scopes the policy to a specific wallet or protocol.
+ * @property {string|string[]} [method] - The method(s) to gate. If omitted, all methods are gated.
+ * @property {(method: string, params: any, wallet: any) => boolean|Promise<boolean>} evaluate - Evaluates whether the method call is allowed.
+ */
 export default class WDK {
     /**
      * Returns a random BIP-39 seed phrase.
@@ -47,11 +60,23 @@ export default class WDK {
      */
     registerPolicies(policies?: Array<Policy>): WDK;
     /**
+     * Runs policies sequentially.
+     *
+     * @param {Array<Policy>} policies
+     * @param {string} method
+     * @param {any} params
+     * @param {PolicyTarget} target
+     * @private
+     */
+    private runPolicies;
+    /**
      * Applies policies to a specific account or protocol instance.
      * Policies are isolated per account.
      *
-     * @param {Object} instance
-     * @param {Object} target - { wallet?, protocol?: { blockchain?, label? } }
+     * @template {typeof SwapProtocol | typeof BridgeProtocol | typeof LendingProtocol | typeof FiatProtocol | IWalletAccountWithProtocols} P
+     * @param {P} instance
+     * @param {PolicyTarget} _target
+     * @returns {P}
      * @private
      */
     private _withPolicyGate;
@@ -129,17 +154,36 @@ export type IWalletAccount = import("@tetherto/wdk-wallet").IWalletAccount;
 export type FeeRates = import("@tetherto/wdk-wallet").FeeRates;
 export type IWalletAccountWithProtocols = import("./wallet-account-with-protocols.js").IWalletAccountWithProtocols;
 export type MiddlewareFunction = <A extends IWalletAccount>(account: A) => Promise<void>;
-export type Policy = {
-    name: string;
-    target?: {
-        wallet?: string;
-        protocol?: {
-            blockchain?: string;
-            label?: string;
-        };
+export type PolicyTarget = {
+    /**
+     * - The wallet identifier this policy applies to.
+     */
+    wallet?: string;
+    /**
+     * - The protocol this policy applies to.
+     */
+    protocol?: {
+        blockchain?: string;
+        label?: string;
     };
+};
+export type Policy = {
+    /**
+     * - The policy name.
+     */
+    name: string;
+    /**
+     * - Scopes the policy to a specific wallet or protocol.
+     */
+    target?: PolicyTarget;
+    /**
+     * - The method(s) to gate. If omitted, all methods are gated.
+     */
     method?: string | string[];
-    evaluate(method: string, params: any, wallet: any): boolean | Promise<boolean>;
+    /**
+     * - Evaluates whether the method call is allowed.
+     */
+    evaluate: (method: string, params: any, wallet: any) => boolean | Promise<boolean>;
 };
 import { SwapProtocol } from '@tetherto/wdk-wallet/protocols';
 import { BridgeProtocol } from '@tetherto/wdk-wallet/protocols';
